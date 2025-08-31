@@ -49,28 +49,36 @@ app.post('/api/detect-tone', async (req, res) => {
     }
 
     // Prompt for tone detection
-    const prompt = `Analyze the tone of the following text and provide:
-1. Current tone assessment (formality level + emotional tone)
-2. 3 alternative tone suggestions that would work well for this content
-3. Brief explanation of why each alternative would be effective
+    const prompt = `You are a tone analysis expert. Analyze the tone of the following text and respond ONLY with valid JSON in this exact format:
 
-Text: "${text}"
-
-Format your response as JSON:
 {
   "currentTone": {
-    "formality": "Casual|Neutral|Formal",
-    "emotion": "Friendly|Neutral|Polite",
-    "description": "brief description of current tone"
+    "formality": "Casual",
+    "emotion": "Friendly",
+    "description": "This text uses casual language with a friendly, approachable tone."
   },
   "suggestions": [
     {
-      "formality": "Casual|Neutral|Formal",
-      "emotion": "Friendly|Neutral|Polite",
-      "reason": "why this tone would work well"
+      "formality": "Formal",
+      "emotion": "Polite",
+      "reason": "This would make it more professional and respectful for business contexts."
+    },
+    {
+      "formality": "Neutral",
+      "emotion": "Neutral",
+      "reason": "This would create a balanced, professional tone that's neither too casual nor too formal."
+    },
+    {
+      "formality": "Casual",
+      "emotion": "Polite",
+      "reason": "This would maintain approachability while adding politeness and respect."
     }
   ]
-}`;
+}
+
+Text to analyze: "${text}"
+
+Remember: Respond ONLY with the JSON, no additional text or explanations.`;
 
     // Call Mistral API for tone detection
     const response = await axios.post(
@@ -79,7 +87,8 @@ Format your response as JSON:
         model: 'mistral-small',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 800,
-        temperature: 0.3,
+        temperature: 0.1, // Lower temperature for more consistent JSON
+        response_format: { type: "json_object" }, // Request JSON format
       },
       {
         headers: {
@@ -93,15 +102,64 @@ Format your response as JSON:
     try {
       // Try to parse the response as JSON
       const content = response.data.choices[0].message.content.trim();
-      toneAnalysis = JSON.parse(content);
+      
+      // Clean the content to extract JSON
+      let jsonContent = content;
+      
+      // If response contains markdown code blocks, extract JSON from them
+      if (content.includes('```json')) {
+        const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          jsonContent = jsonMatch[1].trim();
+        }
+      } else if (content.includes('```')) {
+        // Extract content between any code blocks
+        const codeMatch = content.match(/```\s*([\s\S]*?)\s*```/);
+        if (codeMatch) {
+          jsonContent = codeMatch[1].trim();
+        }
+      }
+      
+      // Try to find JSON object in the content
+      const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonContent = jsonMatch[0];
+      }
+      
+      toneAnalysis = JSON.parse(jsonContent);
+      
+      // Validate the structure
+      if (!toneAnalysis.currentTone || !toneAnalysis.suggestions || !Array.isArray(toneAnalysis.suggestions)) {
+        throw new Error('Invalid response structure');
+      }
+      
     } catch (parseError) {
       // If JSON parsing fails, create a fallback analysis
-      console.warn('Failed to parse tone detection response as JSON, using fallback');
+      console.warn('Failed to parse tone detection response as JSON, using fallback. Response:', response.data.choices[0].message.content);
+      
+      // Try to extract tone information from the text response
+      const content = response.data.choices[0].message.content.toLowerCase();
+      let detectedFormality = 'Neutral';
+      let detectedEmotion = 'Neutral';
+      
+      // Simple keyword-based fallback detection
+      if (content.includes('casual') || content.includes('informal') || content.includes('relaxed')) {
+        detectedFormality = 'Casual';
+      } else if (content.includes('formal') || content.includes('professional') || content.includes('business')) {
+        detectedFormality = 'Formal';
+      }
+      
+      if (content.includes('friendly') || content.includes('warm') || content.includes('approachable')) {
+        detectedEmotion = 'Friendly';
+      } else if (content.includes('polite') || content.includes('respectful') || content.includes('courteous')) {
+        detectedEmotion = 'Polite';
+      }
+      
       toneAnalysis = {
         currentTone: {
-          formality: 'Neutral',
-          emotion: 'Neutral',
-          description: 'Unable to detect specific tone'
+          formality: detectedFormality,
+          emotion: detectedEmotion,
+          description: `AI detected ${detectedFormality.toLowerCase()} formality with ${detectedEmotion.toLowerCase()} emotion.`
         },
         suggestions: [
           {
