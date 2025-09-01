@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
 
 function ToneForm() {
   const [text, setText] = useState("");
@@ -7,27 +6,28 @@ function ToneForm() {
   const [emotion, setEmotion] = useState("neutral");
   const [result, setResult] = useState("");
 
-  cconst handleSubmit = async (e) => {
+  // Fixed typo: removed extra 'c' from 'cconst'
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:5000/api/tone", {
+      // Use relative path so Vercel rewrites it to Render backend
+      const response = await fetch("/api/tone", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, formality, emotion }),
       });
-  
+
       if (!response.ok) {
-        throw new Error("Server not responding");
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
+
       const data = await response.json();
       setResult(data.rewrittenText);
     } catch (error) {
-      console.error("Error:", error);
-      setResult("⚠️ Backend not running. Please start server.");
+      console.error("Error detecting tone:", error);
+      setResult("⚠️ Backend not reachable. Please check your deployment.");
     }
   };
-  
 
   return (
     <div style={{ padding: "20px" }}>
