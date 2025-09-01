@@ -6,6 +6,8 @@ import ToneDetection from './components/ToneDetection'
 import TextEditor from './components/TextEditor'
 import { toneReducer, initialState } from './hooks/useToneReducer'
 import { useLocalStorage } from './hooks/useLocalStorage'
+import ToneForm from "./ToneForm"; 
+
 
 function App() {
   const [state, dispatch] = useReducer(toneReducer, initialState)
@@ -44,7 +46,8 @@ function App() {
     dispatch({ type: 'SET_LOADING', payload: true })
     
     try {
-      const response = await fetch('/api/tone', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/tone`, {
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

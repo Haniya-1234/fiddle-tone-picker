@@ -14,7 +14,8 @@ const ToneDetection = ({ text, onToneSelect, disabled }) => {
     setError(null)
     
     try {
-      const response = await fetch('/api/detect-tone', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/detect-tone`, {
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

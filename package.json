@@ -11,10 +11,19 @@
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "start": "cd backend && npm start"
   },
-  "keywords": ["tone-picker", "text-editor", "mistral-ai", "react", "express"],
-  "author": "Fiddle Engineering Intern",
-  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
-  }
+  },
+  "keywords": [
+    "tone-picker",
+    "ai",
+    "mistral",
+    "react",
+    "express"
+  ],
+  "author": "Fiddle Engineering Intern",
+  "license": "MIT"
 }
